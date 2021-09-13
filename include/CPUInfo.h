@@ -429,11 +429,12 @@ struct Context_t {
     DWORD EAX_80000007H[4];
     DWORD EAX_80000008H[4];
     DWORD EAX_8000000AH[4];
+    DWORD EAX_80000010H[4];
     DWORD EAX_80000019H[4];
     DWORD EAX_8000001AH[4];
     DWORD EAX_8000001BH[4];
     DWORD EAX_8000001CH[4];
-    DWORD EAX_8000001DH[4];
+    DWORD EAX_8000001DH[CPUINFO_MAX_CACHES][4];
     DWORD EAX_8000001EH[4];
 };
 
@@ -524,6 +525,9 @@ void Init(Context_t *dstCtx) {
     if (0x8000000Au <= MaxExtLevel) {
         detail::cpuid(ctx.EAX_8000000AH, 0x8000000A, 0x00);
     }
+    if (0x80000010u <= MaxExtLevel) {
+        detail::cpuid(ctx.EAX_80000010H, 0x80000010, 0x00);
+    }
     if (0x80000019u <= MaxExtLevel) {
         detail::cpuid(ctx.EAX_80000019H, 0x80000019, 0x00);
     }
@@ -537,7 +541,9 @@ void Init(Context_t *dstCtx) {
         detail::cpuid(ctx.EAX_8000001CH, 0x8000001C, 0x00);
     }
     if (0x8000001Du <= MaxExtLevel) {
-        detail::cpuid(ctx.EAX_8000001DH, 0x8000001D, 0x00);
+        for (DWORD ecx = 0; ecx < CPUINFO_MAX_CACHES; ++ecx) {
+            detail::cpuid(ctx.EAX_8000001DH[ecx], 0x8000001D, ecx);
+        }
     }
     if (0x8000001Eu <= MaxExtLevel) {
         detail::cpuid(ctx.EAX_8000001EH, 0x8000001E, 0x00);
@@ -603,6 +609,9 @@ bool HasFeature<ExtFeature3>(const ExtFeature3 f, const Context_t &ctx) {
 //----------------------------------------------------------------------------------------------------
 // Standard area
 //----------------------------------------------------------------------------------------------------
+
+// 00000000H Vendor-ID and Largest Standard Function
+
 /// @brief Get the muximum number of standard function supported
 CPUINFO_INLINE DWORD GetMaxSupportLevel(const Context_t &ctx) {
     return ctx.EAX_00000000H[0];
@@ -615,6 +624,8 @@ CPUINFO_INLINE void GetVendorID(char *dst, const Context_t &ctx) {
     reinterpret_cast<DWORD *>(dst + 8)[0] = ctx.EAX_00000000H[2];
     dst[12] = '\0';
 }
+
+// 00000001H Feature Information
 
 /// @brief Get the processor stepping
 CPUINFO_INLINE DWORD GetProcessorStepping(const Context_t &ctx) {
@@ -672,6 +683,10 @@ CPUINFO_INLINE DWORD GetAPICPhysicalID(const Context_t &ctx) {
     return (ctx.EAX_00000001H[1] >> 24) & 0xff;
 }
 
+// 00000002H Cache Descriptors
+
+// 00000003H Processor Serial Number
+
 /// @brief Get the processor serial number(Available in Pentinum III processor only)
 CPUINFO_INLINE void GetProcessorSerialNumber(WORD dst[6], const Context_t &ctx) {
     if (HasFeature(Feature::PSN, ctx)) {
@@ -691,10 +706,19 @@ CPUINFO_INLINE void GetProcessorSerialNumber(WORD dst[6], const Context_t &ctx) 
     }
 }
 
+// 00000004H Deterministic Cache Parameters
+
 /// @brief Get the cache type
 CPUINFO_INLINE CacheType GetCacheType(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return CacheType::Null;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return CacheType::Null;
+        }
+        return static_cast<CacheType>(ctx.EAX_8000001DH[index][0] & 0x1f);
     }
     return static_cast<CacheType>(ctx.EAX_00000004H[index][0] & 0x1f);
 }
@@ -704,6 +728,13 @@ CPUINFO_INLINE DWORD GetCacheLevel(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return (ctx.EAX_8000001DH[index][0] >> 5) & 0x7;
+    }
     return (ctx.EAX_00000004H[index][0] >> 5) & 0x7;
 }
 
@@ -711,6 +742,13 @@ CPUINFO_INLINE DWORD GetCacheLevel(const DWORD index, const Context_t &ctx) {
 CPUINFO_INLINE bool GetSelfInitializingCacheLevel(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return false;
+        }
+        return ((ctx.EAX_8000001DH[index][0] >> 8) & 0x1) != 0;
     }
     return ((ctx.EAX_00000004H[index][0] >> 8) & 0x1) != 0;
 }
@@ -720,6 +758,13 @@ CPUINFO_INLINE bool GetFullyAssociativeCache(const DWORD index, const Context_t 
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ((ctx.EAX_8000001DH[index][0] >> 9) & 0x1) != 0;
+    }
     return ((ctx.EAX_00000004H[index][0] >> 9) & 0x1) != 0;
 }
 
@@ -727,6 +772,13 @@ CPUINFO_INLINE bool GetFullyAssociativeCache(const DWORD index, const Context_t 
 CPUINFO_INLINE DWORD GetMaxThreadSharingCache(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ((ctx.EAX_8000001DH[index][0] >> 14) & 0xfff) + 1;
     }
     return ((ctx.EAX_00000004H[index][0] >> 14) & 0xfff) + 1;
 }
@@ -736,6 +788,13 @@ CPUINFO_INLINE DWORD GetMaxCoresPerPackage(const DWORD index, const Context_t &c
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ((ctx.EAX_8000001DH[index][0] >> 26) & 0x3f) + 1;
+    }
     return ((ctx.EAX_00000004H[index][0] >> 26) & 0x3f) + 1;
 }
 
@@ -743,6 +802,13 @@ CPUINFO_INLINE DWORD GetMaxCoresPerPackage(const DWORD index, const Context_t &c
 CPUINFO_INLINE DWORD GetSystemCoherencyLineSize(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return (ctx.EAX_8000001DH[index][1] & 0xfff) + 1;
     }
     return (ctx.EAX_00000004H[index][1] & 0xfff) + 1;
 }
@@ -752,6 +818,13 @@ CPUINFO_INLINE DWORD GetPhysicalLinePartitions(const DWORD index, const Context_
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ((ctx.EAX_8000001DH[index][1] >> 12) & 0x3ff) + 1;
+    }
     return ((ctx.EAX_00000004H[index][1] >> 12) & 0x3ff) + 1;
 }
 
@@ -759,6 +832,13 @@ CPUINFO_INLINE DWORD GetPhysicalLinePartitions(const DWORD index, const Context_
 CPUINFO_INLINE DWORD GetWaysAssociativity(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ((ctx.EAX_8000001DH[index][1] >> 22) & 0x3ff) + 1;
     }
     return ((ctx.EAX_00000004H[index][1] >> 22) & 0x3ff) + 1;
 }
@@ -768,6 +848,13 @@ CPUINFO_INLINE DWORD GetCacheNumSets(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return 0;
+        }
+        return ctx.EAX_8000001DH[index][2] + 1;
+    }
     return ctx.EAX_00000004H[index][2] + 1;
 }
 
@@ -775,6 +862,13 @@ CPUINFO_INLINE DWORD GetCacheNumSets(const DWORD index, const Context_t &ctx) {
 CPUINFO_INLINE bool GetWriteBackInvalidate(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
+    }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return false;
+        }
+        return (ctx.EAX_8000001DH[index][3] & 0x1) != 0;
     }
     return (ctx.EAX_00000004H[index][3] & 0x1) != 0;
 }
@@ -784,6 +878,13 @@ CPUINFO_INLINE bool GetCacheInclusiveness(const DWORD index, const Context_t &ct
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return false;
+        }
+        return ((ctx.EAX_8000001DH[index][3] >> 1) & 0x1) != 0;
+    }
     return ((ctx.EAX_00000004H[index][3] >> 1) & 0x1) != 0;
 }
 
@@ -792,6 +893,13 @@ CPUINFO_INLINE bool GetCacheComplexCacheIndexing(const DWORD index, const Contex
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
+    // Verify that VenderID is "AuthenticAMD"
+    if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
+        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+            return false;
+        }
+        return ((ctx.EAX_8000001DH[index][3] >> 2) & 0x1) != 0;
+    }
     return ((ctx.EAX_00000004H[index][3] >> 2) & 0x1) != 0;
 }
 
@@ -799,6 +907,60 @@ CPUINFO_INLINE bool GetCacheComplexCacheIndexing(const DWORD index, const Contex
 CPUINFO_INLINE DWORD GetCacheSize(const DWORD index, const Context_t &ctx) {
     return GetSystemCoherencyLineSize(index, ctx) * GetPhysicalLinePartitions(index, ctx) * GetWaysAssociativity(index, ctx) * GetCacheNumSets(index, ctx);
 }
+
+// 00000005H MONITOR/MWAIT Parameters
+
+/// @brief Get the smallest monitor line size in bytes
+CPUINFO_INLINE DWORD GetSmallestMonitorLineSizeInBytes(const Context_t &ctx) {
+    return ctx.EAX_00000005H[0] & 0xffff;
+}
+
+/// @brief Get the largest monitor line size in bytes
+CPUINFO_INLINE DWORD GetLargestMonitorLineSizeInBytes(const Context_t &ctx) {
+    return ctx.EAX_00000005H[1] & 0xffff;
+}
+
+/// @brief Get supported status of MONITOR/MWAIT extensions
+CPUINFO_INLINE bool GetSupportedMONITORAndMWAITExtension(const Context_t &ctx) {
+    return (ctx.EAX_00000005H[2] & 0x1) != 0;
+}
+
+/// @brief Get supported status for treating interrupts as break-events for MWAIT
+CPUINFO_INLINE bool GetSupportedInterruptAsBreakEventForMWAIT(const Context_t &ctx) {
+    return ((ctx.EAX_00000005H[2] >> 1) & 0x1) != 0;
+}
+
+/// @brief Get number of C0 sub-states supported using MONITOR/MWAIT
+CPUINFO_INLINE bool GetNumC0SubStates(const Context_t &ctx) {
+    return ctx.EAX_00000005H[3] & 0xf;
+}
+
+/// @brief Get number of C1 sub-states supported using MONITOR/MWAIT
+CPUINFO_INLINE bool GetNumC1SubStates(const Context_t &ctx) {
+    return (ctx.EAX_00000005H[3] >> 4) & 0xf;
+}
+
+/// @brief Get number of C2 sub-states supported using MONITOR/MWAIT
+CPUINFO_INLINE bool GetNumC2SubStates(const Context_t &ctx) {
+    return (ctx.EAX_00000005H[3] >> 8) & 0xf;
+}
+
+/// @brief Get number of C3 sub-states supported using MONITOR/MWAIT
+CPUINFO_INLINE bool GetNumC3SubStates(const Context_t &ctx) {
+    return (ctx.EAX_00000005H[3] >> 12) & 0xf;
+}
+
+/// @brief Get number of C4 sub-states supported using MONITOR/MWAIT
+CPUINFO_INLINE bool GetNumC4SubStates(const Context_t &ctx) {
+    return (ctx.EAX_00000005H[3] >> 16) & 0xf;
+}
+
+// 00000006H Digital Thermal Sensor and Power Management Parameters
+// 00000007H Structured Extended Feature Flags Enumeration
+// 00000008H Reserved
+// 00000009H Direct Cache Access Parameters
+// 0000000AH Architectural Performance Monitor Features
+// 0000000BH x2APIC Features/Processor Topology
 
 /// @brief Get number of bits to shift right APIC ID to get next level APIC ID
 CPUINFO_INLINE DWORD GetShiftAPICIDBits(const DWORD index, const Context_t &ctx) {
@@ -840,6 +1002,18 @@ CPUINFO_INLINE DWORD GetExtendedAPICID(const DWORD index, const Context_t &ctx) 
     return ctx.EAX_0000000BH[index][3];
 }
 
+// 0000000CH Reserved
+// 0000000DH XSAVE Features
+// 0000000EH
+// 0000000FH
+// 00000010H
+// 00000011H
+// 00000012H
+// 00000013H
+// 00000014H
+// 00000015H
+// 00000016H
+
 /// @brief Get the processsor base frequency
 CPUINFO_INLINE DWORD GetProcessorBaseFrequency(const Context_t &ctx) {
     return ctx.EAX_00000016H[0] & 0xffff;
@@ -859,10 +1033,16 @@ CPUINFO_INLINE DWORD GetBusFrequency(const Context_t &ctx) {
 //----------------------------------------------------------------------------------------------------
 // Extended area
 //----------------------------------------------------------------------------------------------------
+
+// 80000000H Largest Extended Function
+
 /// @brief Get the muximum number of extended function supported
-CPUINFO_INLINE DWORD GetMaxExtSupportLevel(const Context_t &ctx) {
+CPUINFO_INLINE DWORD GetMaxExtendedSupportLevel(const Context_t &ctx) {
     return ctx.EAX_80000000H[0];
 }
+
+// 80000001H Extended Frature Bits
+// 80000002H - 80000004H Processor Brand String
 
 /// @brief Get processor brand string(ASCII string)
 CPUINFO_INLINE void GetBrandString(char *dst, const Context_t &ctx) {
@@ -880,6 +1060,9 @@ CPUINFO_INLINE void GetBrandString(char *dst, const Context_t &ctx) {
     reinterpret_cast<DWORD *>(dst + 44)[0] = ctx.EAX_80000004H[3];
     dst[48] = '\0';
 }
+
+// 80000005H Reserved
+// 80000006H Extended L2 Cache Features
 
 /// @brief Get the L2 instruction TLB number of entries for 2MB and 4MB pages
 CPUINFO_INLINE DWORD GetL2ITLBEntriesFor2MBAnd4MBPages(const Context_t &ctx) {
@@ -961,6 +1144,9 @@ CPUINFO_INLINE DWORD GetL3CacheSizeIn512KBytes(const Context_t &ctx) {
     return ((ctx.EAX_80000006H[3] >> 18) & 0x3fff);
 }
 
+// 80000007H Advanced Power Management
+// 80000008H Vertual and Physical Address Sizes
+
 /// @brief Get maximum physical bytes address size in bits
 CPUINFO_INLINE DWORD GetMaxPhysicalAddressBits(const Context_t &ctx) {
     return ctx.EAX_80000008H[0] & 0xff;
@@ -975,6 +1161,58 @@ CPUINFO_INLINE DWORD GetMaxLinearAddressBits(const Context_t &ctx) {
 CPUINFO_INLINE DWORD GetMaxGuestPhysicalAddressBits(const Context_t &ctx) {
     return (ctx.EAX_80000008H[0] >> 16) & 0xff;
 }
+
+// 80000009H Reserved
+// 8000000AH SVM Revision and Feature Identification
+// 8000000BH - 80000018H Reserved
+// 80000019H TLB 1GB Page Identifiers
+
+/// @brief Get the L1 instruction TLB number of entries for 1GB pages
+CPUINFO_INLINE DWORD GetL1ITLBEntriesFor1GBPages(const Context_t &ctx) {
+    return ctx.EAX_80000010H[0] & 0xfff;
+}
+
+/// @brief Get the L1 instruction TLB associativity for 1GB pages
+CPUINFO_INLINE DWORD GetL1ITLBAssociativityFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[0] >> 12) & 0xf;
+}
+
+/// @brief Get the L1 data TLB number of entries for 1GB pages
+CPUINFO_INLINE DWORD GetL1DTLBEntriesFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[0] >> 16) & 0xfff;
+}
+
+/// @brief Get the L1 data TLB associativity for 1GB pages
+CPUINFO_INLINE DWORD GetL1DTLBAssociativityFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[0] >> 28) & 0xf;
+}
+
+/// @brief Get the L2 instruction TLB number of entries for 1GB pages
+CPUINFO_INLINE DWORD GetL2ITLBEntriesFor1GBPages(const Context_t &ctx) {
+    return ctx.EAX_80000010H[1] & 0xfff;
+}
+
+/// @brief Get the L2 instruction TLB associativity for 1GB pages
+CPUINFO_INLINE DWORD GetL2ITLBAssociativityFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[1] >> 12) & 0xf;
+}
+
+/// @brief Get the L2 data TLB number of entries for 1GB pages
+CPUINFO_INLINE DWORD GetL2DTLBEntriesFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[1] >> 16) & 0xfff;
+}
+
+/// @brief Get the L2 data TLB associativity for 1GB pages
+CPUINFO_INLINE DWORD GetL2DTLBAssociativityFor1GBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000010H[1] >> 28) & 0xf;
+}
+
+// 8000001AH Performance Optimization Identifiers
+// 8000001BH Instruction Based Sampling Identifiers
+// 8000001CH Lightweight Profiling Capabilities 0
+// 8000001DH Cache Properties
+// 8000001EH Extended APIC ID/Compute Unit Identifiers/Node Identifiers
+
 
 } // namespace "CpuInfo"
 

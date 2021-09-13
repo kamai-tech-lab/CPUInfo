@@ -126,7 +126,7 @@ void PrintCacheInfo(const CpuInfo::Context_t &ctx) {
     };
 
     for (DWORD i = 0; i < CPUINFO_MAX_CACHES; ++i) {
-        if ((ctx.EAX_00000004H[i][0] & 0x1f) == 0) {
+        if (GetCacheType(i, ctx) == CpuInfo::CacheType::Null) {
             break;
         }
         printf("Cache No.                          : %u\n", i);
@@ -196,7 +196,7 @@ void PrintExtInfo(const CpuInfo::Context_t &ctx) {
     char brandStr[49] = "";
     CpuInfo::GetBrandString(brandStr, ctx);
 
-    printf("Max Ext Support Level              : %XH\n", GetMaxExtSupportLevel(ctx));
+    printf("Max Ext Support Level              : %XH\n", GetMaxExtendedSupportLevel(ctx));
     printf("Brand String                       : %s\n", brandStr);
     printf("L2 Cache Line Size                 : %u bytes\n", GetL2CacheLineSize(ctx));
     printf("L2 Cache Line Per Tag              : %u bytes\n", GetL2CacheLinePerTag(ctx));
