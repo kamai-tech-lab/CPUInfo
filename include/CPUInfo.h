@@ -1,4 +1,4 @@
-/// @file CPUInfo.h
+/// @file CpuInfo.h
 /// @author Masayoshi Kamai
 
 #ifndef CPU_INFO_H_
@@ -13,15 +13,15 @@
 // Defines
 //----------------------------------------------------------------------------------------------------
 #ifndef CPUINFO_MAX_CACHES
-    #define CPUINFO_MAX_CACHES      (5)
+    #define CPUINFO_MAX_CACHES                      (5)
 #endif
 
-#ifndef CPUINFO_MAX_TOPOLOGY_LEVELS
-    #define CPUINFO_MAX_TOPOLOGY_LEVELS         (5)
+#ifndef CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS
+    #define CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS   (5)
 #endif
 
 #ifndef CPUINFO_MAX_FEATURE_SUBLEAFS
-    #define CPUINFO_MAX_EXT_FEATURE_SUBLEAFS    (1)
+    #define CPUINFO_MAX_EXT_FEATURE_SUBLEAFS        (1)
 #endif
 
 //----------------------------------------------------------------------------------------------------
@@ -35,6 +35,14 @@ namespace CpuInfo {
 
 //----------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------
+
+/// @enum ProcessorType
+enum class ProcessorType : DWORD {
+    OriginalOEM,
+    OverDrive,
+    Dual,
+    IntelReserved,
+};
 
 // @enum Feature
 enum class Feature : DWORD {
@@ -362,16 +370,37 @@ enum class ExtFeature3 : DWORD {
 
 /// @enum CacheType
 enum class CacheType : DWORD {
-    Null,
-    Data,
-    Instruction,
-    Unified,
+    Null,           ///< Null, no more caches
+    Data,           ///< Data cache
+    Instruction,    ///< Instruction cache
+    Unified,        ///< Unified cache
 };
 
-enum class TopologyType : DWORD {
+/// @enum TopologyLevelType
+enum class TopologyLevelType : DWORD {
     Invalid,
     Thread,
     Core,
+};
+
+/// @enum CacheAssociativity
+enum class CacheAssociativity : DWORD {
+    Disabled        = 0x00,
+    DirectMapped    = 0x01,
+    Way2            = 0x02,
+//  reserved        = 0x03,
+    Way4            = 0x04,
+//  reserved        = 0x05,
+    Way8            = 0x06,
+//  reserved        = 0x07,
+    Way16           = 0x08,
+//  reserved        = 0x09,
+    Way32           = 0x0a,
+    Way48           = 0x0b,
+    Way64           = 0x0c,
+    Way96           = 0x0d,
+    Way128          = 0x0e,
+    Full            = 0x0f,
 };
 
 /// @struct Context_t
@@ -386,7 +415,7 @@ struct Context_t {
     DWORD EAX_00000007H[CPUINFO_MAX_EXT_FEATURE_SUBLEAFS + 1][4];
     DWORD EAX_00000009H[4];
     DWORD EAX_0000000AH[4];
-    DWORD EAX_0000000BH[CPUINFO_MAX_TOPOLOGY_LEVELS][4];
+    DWORD EAX_0000000BH[CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS][4];
     DWORD EAX_0000000DH[4];
     DWORD EAX_00000016H[4];
 
@@ -456,7 +485,7 @@ void Init(Context_t *dstCtx) {
         detail::cpuid(ctx.EAX_0000000AH, 0x0A, 0x00);
     }
     if (0x0Bu <= MaxLevel) {
-        for (DWORD ecx = 0; ecx < CPUINFO_MAX_TOPOLOGY_LEVELS; ++ecx) {
+        for (DWORD ecx = 0; ecx < CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS; ++ecx) {
             detail::cpuid(ctx.EAX_0000000BH[ecx], 0x0B, ecx);
         }
     }
@@ -572,12 +601,14 @@ bool HasFeature<ExtFeature3>(const ExtFeature3 f, const Context_t &ctx) {
 }
 
 //----------------------------------------------------------------------------------------------------
-// Basic area
+// Standard area
 //----------------------------------------------------------------------------------------------------
+/// @brief Get the muximum number of standard function supported
 CPUINFO_INLINE DWORD GetMaxSupportLevel(const Context_t &ctx) {
     return ctx.EAX_00000000H[0];
 }
 
+/// @brief Get the Vender-ID string(ASCII string)
 CPUINFO_INLINE void GetVendorID(char *dst, const Context_t &ctx) {
     reinterpret_cast<DWORD *>(dst + 0)[0] = ctx.EAX_00000000H[1];
     reinterpret_cast<DWORD *>(dst + 4)[0] = ctx.EAX_00000000H[3];
@@ -585,39 +616,48 @@ CPUINFO_INLINE void GetVendorID(char *dst, const Context_t &ctx) {
     dst[12] = '\0';
 }
 
-CPUINFO_INLINE DWORD GetProcStepping(const Context_t &ctx) {
+/// @brief Get the processor stepping
+CPUINFO_INLINE DWORD GetProcessorStepping(const Context_t &ctx) {
     return ctx.EAX_00000001H[0] & 0x0f;
 }
 
-CPUINFO_INLINE DWORD GetProcModel(const Context_t &ctx) {
+/// @brief Get the processor model
+CPUINFO_INLINE DWORD GetProcessorModel(const Context_t &ctx) {
     return (ctx.EAX_00000001H[0] >> 4) & 0x0f;
 }
 
-CPUINFO_INLINE DWORD GetProcFamily(const Context_t &ctx) {
+/// @brief Get the processor family
+CPUINFO_INLINE DWORD GetProcessorFamily(const Context_t &ctx) {
     return (ctx.EAX_00000001H[0] >> 8) & 0x0f;
 }
 
-CPUINFO_INLINE DWORD GetProcType(const Context_t &ctx) {
-    return (ctx.EAX_00000001H[0] >> 12) & 0x03;
+/// @brief Get the processor type
+CPUINFO_INLINE ProcessorType GetProcessorType(const Context_t &ctx) {
+    return static_cast<ProcessorType>((ctx.EAX_00000001H[0] >> 12) & 0x03);
 }
 
-CPUINFO_INLINE DWORD GetProcExtModel(const Context_t &ctx) {
+/// @brief Get the processor extended model
+CPUINFO_INLINE DWORD GetProcessorExtendedModel(const Context_t &ctx) {
     return (ctx.EAX_00000001H[0] >> 16) & 0x03;
 }
 
-CPUINFO_INLINE DWORD GetProcExtFamily(const Context_t &ctx) {
+/// @brief Get the processor extended family
+CPUINFO_INLINE DWORD GetProcessorExtendedFamily(const Context_t &ctx) {
     return (ctx.EAX_00000001H[0] >> 20) & 0xff;
 }
 
+/// @brief Get the brand index
 CPUINFO_INLINE DWORD GetBlandIndex(const Context_t &ctx) {
     return ctx.EAX_00000001H[1] & 0xff;
 }
 
+/// @brief Get the CLFLUSH line size(Value * 8 = cache line size in bytes)
 CPUINFO_INLINE DWORD GetCLFlushLineSizeInBytes(const Context_t &ctx) {
     return ((ctx.EAX_00000001H[1] >> 8) & 0xff) * 8;
 }
 
-CPUINFO_INLINE DWORD GetNumLogicalProcessors(const Context_t &ctx) {
+/// @brief Get muximum number of logical processors per package(or can also be considered the number of APIC IDs reserved for this package)
+CPUINFO_INLINE DWORD GetMaxLogicalProcessorsPerPackage(const Context_t &ctx) {
     // Verify that VenderID is "AuthenticAMD"
     if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
         if (!HasFeature(Feature::HTT, ctx) && !HasFeature(ExtFeature2::CMP_LEGACY, ctx)) {
@@ -627,10 +667,12 @@ CPUINFO_INLINE DWORD GetNumLogicalProcessors(const Context_t &ctx) {
     return (ctx.EAX_00000001H[1] >> 16) & 0xff;
 }
 
+/// @brief Get the default APIC ID
 CPUINFO_INLINE DWORD GetAPICPhysicalID(const Context_t &ctx) {
     return (ctx.EAX_00000001H[1] >> 24) & 0xff;
 }
 
+/// @brief Get the processor serial number(Available in Pentinum III processor only)
 CPUINFO_INLINE void GetProcessorSerialNumber(WORD dst[6], const Context_t &ctx) {
     if (HasFeature(Feature::PSN, ctx)) {
         dst[0] = ((ctx.EAX_00000001H[0] >> 16) & 0xffff);
@@ -649,6 +691,7 @@ CPUINFO_INLINE void GetProcessorSerialNumber(WORD dst[6], const Context_t &ctx) 
     }
 }
 
+/// @brief Get the cache type
 CPUINFO_INLINE CacheType GetCacheType(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return CacheType::Null;
@@ -656,6 +699,7 @@ CPUINFO_INLINE CacheType GetCacheType(const DWORD index, const Context_t &ctx) {
     return static_cast<CacheType>(ctx.EAX_00000004H[index][0] & 0x1f);
 }
 
+/// @brief Get the cache level
 CPUINFO_INLINE DWORD GetCacheLevel(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
@@ -663,55 +707,63 @@ CPUINFO_INLINE DWORD GetCacheLevel(const DWORD index, const Context_t &ctx) {
     return (ctx.EAX_00000004H[index][0] >> 5) & 0x7;
 }
 
-CPUINFO_INLINE bool GetCacheSelfInitializing(const DWORD index, const Context_t &ctx) {
+/// @brief Get the self initializing cache level
+CPUINFO_INLINE bool GetSelfInitializingCacheLevel(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
     return ((ctx.EAX_00000004H[index][0] >> 8) & 0x1) != 0;
 }
 
-CPUINFO_INLINE bool GetCacheFullyAssociative(const DWORD index, const Context_t &ctx) {
+/// @brief Get the full associative cache
+CPUINFO_INLINE bool GetFullyAssociativeCache(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
     return ((ctx.EAX_00000004H[index][0] >> 9) & 0x1) != 0;
 }
 
-CPUINFO_INLINE DWORD GetCacheThreadSharing(const DWORD index, const Context_t &ctx) {
+/// @brief Get maximum number of threads sharing this cache
+CPUINFO_INLINE DWORD GetMaxThreadSharingCache(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
     return ((ctx.EAX_00000004H[index][0] >> 14) & 0xfff) + 1;
 }
 
-CPUINFO_INLINE DWORD GetCacheCoresPerPackage(const DWORD index, const Context_t &ctx) {
+/// @brief Get the maximum number of processor cores in this physical processor package
+CPUINFO_INLINE DWORD GetMaxCoresPerPackage(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
     return ((ctx.EAX_00000004H[index][0] >> 26) & 0x3f) + 1;
 }
 
-CPUINFO_INLINE DWORD GetCacheSystemCoherencyLineSize(const DWORD index, const Context_t &ctx) {
+/// @brief Get the system coherency line size
+CPUINFO_INLINE DWORD GetSystemCoherencyLineSize(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
     return (ctx.EAX_00000004H[index][1] & 0xfff) + 1;
 }
 
-CPUINFO_INLINE DWORD GetCachePhysicalLineParts(const DWORD index, const Context_t &ctx) {
+/// @brief Get the physical line partitions
+CPUINFO_INLINE DWORD GetPhysicalLinePartitions(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
     return ((ctx.EAX_00000004H[index][1] >> 12) & 0x3ff) + 1;
 }
 
-CPUINFO_INLINE DWORD GetCacheWaysAssociativity(const DWORD index, const Context_t &ctx) {
+/// @brief Get the ways of associativity
+CPUINFO_INLINE DWORD GetWaysAssociativity(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
     }
     return ((ctx.EAX_00000004H[index][1] >> 22) & 0x3ff) + 1;
 }
 
+/// @brief Get number of sets
 CPUINFO_INLINE DWORD GetCacheNumSets(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return 0;
@@ -719,13 +771,15 @@ CPUINFO_INLINE DWORD GetCacheNumSets(const DWORD index, const Context_t &ctx) {
     return ctx.EAX_00000004H[index][2] + 1;
 }
 
-CPUINFO_INLINE bool GetCacheWriteBackInvalidate(const DWORD index, const Context_t &ctx) {
+/// @brief Get the write back invalidate
+CPUINFO_INLINE bool GetWriteBackInvalidate(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
     }
     return (ctx.EAX_00000004H[index][3] & 0x1) != 0;
 }
 
+/// @brief Get the cache inclusiveness
 CPUINFO_INLINE bool GetCacheInclusiveness(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
@@ -733,6 +787,7 @@ CPUINFO_INLINE bool GetCacheInclusiveness(const DWORD index, const Context_t &ct
     return ((ctx.EAX_00000004H[index][3] >> 1) & 0x1) != 0;
 }
 
+/// @brief Get the complex cache indexing
 CPUINFO_INLINE bool GetCacheComplexCacheIndexing(const DWORD index, const Context_t &ctx) {
     if (CPUINFO_MAX_CACHES <= index) {
         return false;
@@ -742,52 +797,60 @@ CPUINFO_INLINE bool GetCacheComplexCacheIndexing(const DWORD index, const Contex
 
 /// @brief Get specified cache capacity in bytes
 CPUINFO_INLINE DWORD GetCacheSize(const DWORD index, const Context_t &ctx) {
-    return GetCacheSystemCoherencyLineSize(index, ctx) * GetCachePhysicalLineParts(index, ctx) * GetCacheWaysAssociativity(index, ctx) * GetCacheNumSets(index, ctx);
+    return GetSystemCoherencyLineSize(index, ctx) * GetPhysicalLinePartitions(index, ctx) * GetWaysAssociativity(index, ctx) * GetCacheNumSets(index, ctx);
 }
 
+/// @brief Get number of bits to shift right APIC ID to get next level APIC ID
 CPUINFO_INLINE DWORD GetShiftAPICIDBits(const DWORD index, const Context_t &ctx) {
-    if (CPUINFO_MAX_TOPOLOGY_LEVELS <= index) {
+    if (CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS <= index) {
         return 0;
     }
     return ctx.EAX_0000000BH[index][0] & 0x1f;
 }
 
+/// @brief Get number of factory-configured logical processors at the level
 CPUINFO_INLINE DWORD GetNumFCLogicalProcessors(const DWORD index, const Context_t &ctx) {
-    if (CPUINFO_MAX_TOPOLOGY_LEVELS <= index) {
+    if (CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS <= index) {
         return 0;
     }
     return ctx.EAX_0000000BH[index][1] & 0xffff;
 }
 
+/// @brief Get the level number
 CPUINFO_INLINE DWORD GetTopologyLevel(const DWORD index, const Context_t &ctx) {
-    if (CPUINFO_MAX_TOPOLOGY_LEVELS <= index) {
+    if (CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS <= index) {
         return 0;
     }
     return ctx.EAX_0000000BH[index][2] & 0xff;
 }
 
-CPUINFO_INLINE TopologyType GetTopologyType(const DWORD index, const Context_t &ctx) {
-    if (CPUINFO_MAX_TOPOLOGY_LEVELS <= index) {
-        return TopologyType::Invalid;
+/// @brief Get the level type
+CPUINFO_INLINE TopologyLevelType GetTopologyLevelType(const DWORD index, const Context_t &ctx) {
+    if (CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS <= index) {
+        return TopologyLevelType::Invalid;
     }
-    return static_cast<TopologyType>((ctx.EAX_0000000BH[index][2] >> 8) & 0xff);
+    return static_cast<TopologyLevelType>((ctx.EAX_0000000BH[index][2] >> 8) & 0xff);
 }
 
-CPUINFO_INLINE DWORD GetEnhancedAPICID(const DWORD index, const Context_t &ctx) {
-    if (CPUINFO_MAX_TOPOLOGY_LEVELS <= index) {
+/// @brief Get the extended APIC ID
+CPUINFO_INLINE DWORD GetExtendedAPICID(const DWORD index, const Context_t &ctx) {
+    if (CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS <= index) {
         return 0;
     }
     return ctx.EAX_0000000BH[index][3];
 }
 
-CPUINFO_INLINE DWORD GetProcBaseFrequency(const Context_t &ctx) {
+/// @brief Get the processsor base frequency
+CPUINFO_INLINE DWORD GetProcessorBaseFrequency(const Context_t &ctx) {
     return ctx.EAX_00000016H[0] & 0xffff;
 }
 
+/// @brief Get the processsor max frequency
 CPUINFO_INLINE DWORD GetMaxFrequency(const Context_t &ctx) {
     return ctx.EAX_00000016H[1] & 0xffff;
 }
 
+/// @brief Get the bus frequency
 CPUINFO_INLINE DWORD GetBusFrequency(const Context_t &ctx) {
     return ctx.EAX_00000016H[1] & 0xffff;
 }
@@ -796,10 +859,12 @@ CPUINFO_INLINE DWORD GetBusFrequency(const Context_t &ctx) {
 //----------------------------------------------------------------------------------------------------
 // Extended area
 //----------------------------------------------------------------------------------------------------
+/// @brief Get the muximum number of extended function supported
 CPUINFO_INLINE DWORD GetMaxExtSupportLevel(const Context_t &ctx) {
     return ctx.EAX_80000000H[0];
 }
 
+/// @brief Get processor brand string(ASCII string)
 CPUINFO_INLINE void GetBrandString(char *dst, const Context_t &ctx) {
     reinterpret_cast<DWORD *>(dst +  0)[0] = ctx.EAX_80000002H[0];
     reinterpret_cast<DWORD *>(dst +  4)[0] = ctx.EAX_80000002H[1];
@@ -816,30 +881,97 @@ CPUINFO_INLINE void GetBrandString(char *dst, const Context_t &ctx) {
     dst[48] = '\0';
 }
 
+/// @brief Get the L2 instruction TLB number of entries for 2MB and 4MB pages
+CPUINFO_INLINE DWORD GetL2ITLBEntriesFor2MBAnd4MBPages(const Context_t &ctx) {
+    return ctx.EAX_80000006H[0] & 0xfff;
+}
+
+/// @brief Get the L2 instruction TLB associativity for 2MB and 4MB pages
+CPUINFO_INLINE DWORD GetL2ITLBAssociativityFor2MBAnd4MBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[0] >> 12) & 0xf;
+}
+
+/// @brief Get the L2 data TLB number of entries for 2MB and 4MB pages
+CPUINFO_INLINE DWORD GetL2DTLBEntriesFor2MBAnd4MBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[0] >> 16) & 0xfff;
+}
+
+/// @brief Get the L2 data TLB associativity for 2MB and 4MB pages
+CPUINFO_INLINE DWORD GetL2DTLBAssociativityFor2MBAnd4MBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[0] >> 28) & 0xf;
+}
+
+/// @brief Get the L2 instruction TLB number of entries for 4KB pages
+CPUINFO_INLINE DWORD GetL2ITLBEntriesFor4KBPages(const Context_t &ctx) {
+    return ctx.EAX_80000006H[1] & 0xfff;
+}
+
+/// @brief Get the L2 instruction TLB associativity for 4KB pages
+CPUINFO_INLINE DWORD GetL2ITLBAssociativityFor4KBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[1] >> 12) & 0xf;
+}
+
+/// @brief Get the L2 data TLB number of entries for 4KB pages
+CPUINFO_INLINE DWORD GetL2DTLBEntriesFor4KBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[1] >> 16) & 0xfff;
+}
+
+/// @brief Get the L2 data TLB associativity for 4KB pages
+CPUINFO_INLINE DWORD GetL2DTLBAssociativityFor4KBPages(const Context_t &ctx) {
+    return (ctx.EAX_80000006H[1] >> 28) & 0xf;
+}
+
+/// @brief L2 cache line size in bytes
 CPUINFO_INLINE DWORD GetL2CacheLineSize(const Context_t &ctx) {
     return ctx.EAX_80000006H[2] & 0xff;
 }
 
+/// @brief Get the L2 cache line per tag
 CPUINFO_INLINE DWORD GetL2CacheLinePerTag(const Context_t &ctx) {
     return ((ctx.EAX_80000006H[2] >> 8) & 0xf) != 0;
 }
 
-CPUINFO_INLINE DWORD GetL2CacheAssociativity(const Context_t &ctx) {
-    return ((ctx.EAX_80000006H[2] >> 12) & 0xf) != 0;
+/// @brief Get the L2 cache associativity
+CPUINFO_INLINE CacheAssociativity GetL2CacheAssociativity(const Context_t &ctx) {
+    return static_cast<CacheAssociativity>((ctx.EAX_80000006H[2] >> 12) & 0xf);
 }
 
+/// @brief Get the L2 cache size described in 1KB units
 CPUINFO_INLINE DWORD GetL2CacheSizeInKBytes(const Context_t &ctx) {
     return (ctx.EAX_80000006H[2] >> 16) & 0xffff;
 }
 
+/// @brief L3 cache line size in bytes
+CPUINFO_INLINE DWORD GetL3CacheLineSize(const Context_t &ctx) {
+    return ctx.EAX_80000006H[3] & 0xff;
+}
+
+/// @brief Get the L3 cache line per tag
+CPUINFO_INLINE DWORD GetL3CacheLinePerTag(const Context_t &ctx) {
+    return ((ctx.EAX_80000006H[3] >> 8) & 0xf) != 0;
+}
+
+/// @brief Get the L3 cache associativity
+CPUINFO_INLINE CacheAssociativity GetL3CacheAssociativity(const Context_t &ctx) {
+    return static_cast<CacheAssociativity>((ctx.EAX_80000006H[3] >> 12) & 0xf);
+}
+
+/// @brief Get the L3 cache size described in 512KB units((Vlue * 512KB) <= L3 cache size < ((Value + 1) * 512KB))
+CPUINFO_INLINE DWORD GetL3CacheSizeIn512KBytes(const Context_t &ctx) {
+    return ((ctx.EAX_80000006H[3] >> 18) & 0x3fff);
+}
+
+/// @brief Get maximum physical bytes address size in bits
 CPUINFO_INLINE DWORD GetMaxPhysicalAddressBits(const Context_t &ctx) {
     return ctx.EAX_80000008H[0] & 0xff;
 }
 
+/// @brief Get maximum linear bytes address size in bits
 CPUINFO_INLINE DWORD GetMaxLinearAddressBits(const Context_t &ctx) {
     return (ctx.EAX_80000008H[0] >> 8) & 0xff;
 }
 
+/// @brief Get maximum guest physical bytes address size in bits
 CPUINFO_INLINE DWORD GetMaxGuestPhysicalAddressBits(const Context_t &ctx) {
     return (ctx.EAX_80000008H[0] >> 16) & 0xff;
 }
