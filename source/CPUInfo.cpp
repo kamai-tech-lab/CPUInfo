@@ -175,22 +175,22 @@ void PrintFrequencyInfo(const CpuInfo::Context_t &ctx) {
 
 void PrintExtInfo(const CpuInfo::Context_t &ctx) {
     const char *cacheAssocItems[32] = {
-        "Disabled",             // 0x00
-        "Direct mapped",        // 0x01
-        "2-way",                // 0x02
-        "Unknown03",            // 0x03
-        "4-way",                // 0x04
-        "Unknown05",            // 0x05
-        "8-way",                // 0x06
-        "Unknown07",            // 0x07
-        "16-way",               // 0x08
-        "Unknown09",            // 0x09
-        "32-way",               // 0x0a
-        "48-way",               // 0x0b
-        "64-way",               // 0x0c
-        "96-way",               // 0x0d
-        "128-way",              // 0x0e
-        "Fully Associative"     // 0x0f
+        "Disabled",         // 0x00
+        "Direct mapped",    // 0x01
+        "2-way",            // 0x02
+        "reserved",         // 0x03
+        "4-way",            // 0x04
+        "reserved",         // 0x05
+        "8-way",            // 0x06
+        "reserved",         // 0x07
+        "16-way",           // 0x08
+        "reserved",         // 0x09
+        "32-way",           // 0x0a
+        "48-way",           // 0x0b
+        "64-way",           // 0x0c
+        "96-way",           // 0x0d
+        "128-way",          // 0x0e
+        "Fully Associative" // 0x0f
     };
 
     char brandStr[49] = "";
@@ -198,12 +198,12 @@ void PrintExtInfo(const CpuInfo::Context_t &ctx) {
 
     printf("Max Ext Support Level              : %XH\n", GetMaxExtendedSupportLevel(ctx));
     printf("Brand String                       : %s\n", brandStr);
-    printf("L2 Cache Line Size                 : %u bytes\n", GetL2CacheLineSize(ctx));
-    printf("L2 Cache Line Per Tag              : %u bytes\n", GetL2CacheLinePerTag(ctx));
+    printf("L2 Cache Line Size                 : %u bytes\n", GetL2CacheLineSizeInBytes(ctx));
+    printf("L2 Cache Lines Per Tag             : %u\n", GetL2CacheLinesPerTag(ctx));
     printf("L2 Cache Associativity             : %s\n", cacheAssocItems[(DWORD)GetL2CacheAssociativity(ctx)]);
     printf("L2 Cache Size                      : %u Kbytes\n", GetL2CacheSizeInKBytes(ctx));
-    printf("L3 Cache Line Size                 : %u bytes\n", GetL3CacheLineSize(ctx));
-    printf("L3 Cache Line Per Tag              : %u bytes\n", GetL3CacheLinePerTag(ctx));
+    printf("L3 Cache Line Size                 : %u bytes\n", GetL3CacheLineSizeInBytes(ctx));
+    printf("L3 Cache Lines Per Tag             : %u\n", GetL3CacheLinesPerTag(ctx));
     printf("L3 Cache Associativity             : %s\n", cacheAssocItems[(DWORD)GetL3CacheAssociativity(ctx)]);
     printf("L3 Cache Size                      : %u Kbytes\n", GetL3CacheSizeIn512KBytes(ctx) * 512);
     printf("Max Physical Address Bits          : %u\n", GetMaxPhysicalAddressBits(ctx));

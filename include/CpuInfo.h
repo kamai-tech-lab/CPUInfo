@@ -130,10 +130,10 @@ enum class Feature3 : DWORD {
     ERMS                = 9,    ///< Supports Enhanced REP MOVSB/STOSB
     INVPCID             = 10,   ///< Supports Invalidate Processor Context ID
     RTM                 = 11,   ///< Supports Restricted Transactional Memory
-    PQM                 = 12,
+    IRDT_M              = 12,   ///< Supports Intel Resource Director Technology Monitoring capability
     FPUCSDS             = 13,   ///< Supports Deprecates FPU CS and FPU DS values
     IMPX                = 14,   ///< Supports Intel Memory Protection Extensions
-    PQE                 = 15,
+    IRDT_A              = 15,   ///< Supports Intel Resource Director Technology Allocation capability
     AVX512_F            = 16,   ///< Supports AVX512 Foundation
     AVX512_DQ           = 17,   ///< Supports AVX512 Doubleword and Quadword instructions
     RDSEED              = 18,   ///< Supports RDSEED instruction
@@ -156,15 +156,15 @@ enum class Feature3 : DWORD {
 enum class Feature4 : DWORD {
     PREFETCHWT1         = 0,    ///< Supports PREFETCHWT1 instruction
     AVX512_VBMI         = 1,    ///< Supports AVX512 Vector Byte Manipulation Instructions
-    UMIP                = 2,
-    PKU                 = 3,
-    OSPKE               = 4,
-    WAITPKG             = 5,
+    UMIP                = 2,    ///< Supports User-mode instruction prevention
+    PKU                 = 3,    ///< Supports Protection keys for user-mode pages
+    OSPKE               = 4,    ///< OS has set CR4.PKE to enable protection keys (and supports RDPKRU/WRPKRU instructions)
+    WAITPKG             = 5,    ///< Supports timed pause and user-level monitor/wait
     AVX512_VBMI2        = 6,    ///< Supports AVX512 Vector Byte Manipulation Instructions 2
-    CET_SS              = 7,
-    GFNI                = 8,
-    VAES                = 9,
-    VPCLMULQDQ          = 10,
+    CET_SS              = 7,    ///< Supports Control Flow Enforcement (CET) Shadow Stack
+    GFNI                = 8,    ///< Supports Galois Field instructions
+    VAES                = 9,    ///< Supports Vector AES instruction set(VEX-256/EVEX)
+    VPCLMULQDQ          = 10,   ///< Supports CLMUL instruction set(VEX-256/EVEX)
     AVX512_VNNI         = 11,   ///< Supports AVX512 Vector Neural Network Instructions
     AVX512_BITALG       = 12,   ///< Supports AVX512 Bit Algorithms instructions
     // reserved 13
@@ -176,16 +176,16 @@ enum class Feature4 : DWORD {
     // reserved 19
     // reserved 20
     // reserved 21
-    RDPID               = 22,
+    RDPID               = 22,   ///< Supports Read Processor ID and IA32_TSC_AUX
     // reserved 23
     // reserved 24
-    CLDEMOTE            = 25,
+    CLDEMOTE            = 25,   ///< Supports cache line demote
     // reserved 26
-    MOVDIRI             = 27,
-    MOVDIR64B           = 28,
-    ENQCMD              = 29,
-    SGX_LC              = 30,
-    PKS                 = 31,
+    MOVDIRI             = 27,   ///< Suppots MOVDIRI instruction
+    MOVDIR64B           = 28,   ///< Suppots MOVDIRI64B instruction
+    ENQCMD              = 29,   ///< Suppots Enqueue Stores
+    SGX_LC              = 30,   ///< Suppots SGX Launch Confiuration
+    PKS                 = 31,   ///< Suppots Protection key for supervisor-mode page
 };
 
 // @enum Feature5
@@ -194,34 +194,34 @@ enum class Feature5 : DWORD {
     // reserved 1
     AVX512_4VNNIW           = 2,    ///< Supports AVX512 Vector Neural Network Instructions Word variable precision
     AVX512_4FMAPS           = 3,    ///< Supports AVX512 Fused Multiply Accumulation Packed Single precision
-    FSRM                    = 4,
+    FSRM                    = 4,    ///< Supports Fast Short REP MOVSB
     // reserved 5
     // reserved 6
     // reserved 7
     AVX512_VP2INTERSECT     = 8,    ///< Supports AVX512 Vector Pair Intersection to a Pair of Mask Registers
-    SRBDS_CTRL              = 9,
-    MD_CLEAR                = 10,
+    SRBDS_CTRL              = 9,    ///< Supports Special Register Buffer Data Sampling Mitigations
+    MD_CLEAR                = 10,   ///< Supports VERQ instruction clear CPU buffers
     // reserved 11
     // reserved 12
     TSX_FORCE_ABORT         = 13,
-    SERIALIZE               = 14,
-    HYBRID                  = 15,
-    TSXLDTRK                = 16,
+    SERIALIZE               = 14,   ///< Supports Serialize instruction execution
+    HYBRID                  = 15,   ///< The processor is identified as a hybrid part
+    TSXLDTRK                = 16,   ///< Supports TSX Suspend load address tracking
     // reserved 17
-    PCONFIG                 = 18,
-    LBR                     = 19,
-    CET_IBT                 = 20,
+    PCONFIG                 = 18,   ///< Supports Platform Configuration (Memory Encryption Technologies Instructions)
+    LBR                     = 19,   ///< Supports Architectural Last Branch Records
+    CET_IBT                 = 20,   ///< Supports Control Flow Enforcement (CET) Indirect Branch Tracking
     // reserved 21
-    AMX_BF16                = 22,
-    // reserved 23
-    AMX_TILE                = 24,
-    AMX_INT8                = 25,
-    IBRS_IBPB               = 26,
-    STIBP                   = 27,
-    L1D_FLUSH               = 28,
-    IA32_ARCH_CAPABILITIES  = 29,
-    IA32_CORE_CAPABILITIES  = 30,
-    SSDB                    = 31,
+    AMX_BF16                = 22,   ///< Supports Tile computation on bfloat16(16-bit brain floating-point format --> s7e8) numbers
+    AVX512_FP16             = 23,   ///< Supports AVX512 16-bit Float(s10e5) instructions (requires AVX512_BW feature)
+    AMX_TILE                = 24,   ///< Supports tile architecture
+    AMX_INT8                = 25,   ///< Supports tile computation on 8-bit integers
+    IBRS_IBPB               = 26,   ///< Supports Speculation Control, part of Indirect Branch Control (IBC): Indirect Branch Restricted Speculation (IBRS) and Indirect Branch Prediction Barrier (IBPB)
+    STIBP                   = 27,   ///< Supports Single Thread Indirect Branch Predictor, part of IBC
+    L1D_FLUSH               = 28,   ///< Supports IA32_FLUSH_CMD MSR
+    IA32_ARCH_CAPABILITIES  = 29,   ///< Supports Speculative Side Channel Mitigations
+    IA32_CORE_CAPABILITIES  = 30,   ///< Supports for a MSR listing model-specific core capabilities
+    SSDB                    = 31,   ///< Supports Speculative Store Bypass Disable
 };
 
 // @enum Feature6
@@ -231,7 +231,7 @@ enum class Feature6 : DWORD {
     // reserved 2
     // reserved 3
     // reserved 4
-    AVX512_BF16         = 5,  ///< Supports AVX512 16-bit Float instructions
+    AVX512_BF16         = 5,  ///< Supports AVX512 bfloat16(16-bit brain floating-point format --> s7e8) instructions
     // reserved 6
     // reserved 7
     // reserved 8
@@ -317,16 +317,16 @@ enum class ExtFeature2 : DWORD {
     FMA4                = 16,   ///< Supports 4 operands FMA instructions
     TCE                 = 17,   ///< Supports Translation Cache Extension
     // reserved 18
-    MSR                 = 19,
+    NODEID_MSR          = 19,   ///< Supports NodeID MSR
     // reserved 20
     TBM                 = 21,   ///< Supports Trailing Bit Manipulation instruction
     TOPOLOGY_EXT        = 22,   ///< Supports Topology Extensions
-    PERFCTR_CORE        = 23,
-    PERFCTR_NB          = 24,
+    PERFCTR_CORE        = 23,   ///< Supports Core performance counter extensions
+    PERFCTR_NB          = 24,   ///< Supports NB performance counter extensions
     // reserved 25
-    DBX                 = 26,
-    PERFTSC             = 27,
-    PERFCTR_L2          = 28,
+    DBX                 = 26,   ///< Supports Data breakpoint extensions
+    PERFTSC             = 27,   ///< Supports Performance TSC
+    PERFCTR_L2          = 28,   ///< Supports L2I perf counter extensions
     // reserved 29
     // reserved 30
     // reserved 31
@@ -674,6 +674,7 @@ CPUINFO_INLINE DWORD GetMaxLogicalProcessorsPerPackage(const Context_t &ctx) {
         if (!HasFeature(Feature::HTT, ctx) && !HasFeature(ExtFeature2::CMP_LEGACY, ctx)) {
             return 1;
         }
+        return (ctx.EAX_80000008H[2] & 0xff) + 1;
     }
     return (ctx.EAX_00000001H[1] >> 16) & 0xff;
 }
@@ -1105,12 +1106,12 @@ CPUINFO_INLINE DWORD GetL2DTLBAssociativityFor4KBPages(const Context_t &ctx) {
 }
 
 /// @brief L2 cache line size in bytes
-CPUINFO_INLINE DWORD GetL2CacheLineSize(const Context_t &ctx) {
+CPUINFO_INLINE DWORD GetL2CacheLineSizeInBytes(const Context_t &ctx) {
     return ctx.EAX_80000006H[2] & 0xff;
 }
 
 /// @brief Get the L2 cache line per tag
-CPUINFO_INLINE DWORD GetL2CacheLinePerTag(const Context_t &ctx) {
+CPUINFO_INLINE DWORD GetL2CacheLinesPerTag(const Context_t &ctx) {
     return ((ctx.EAX_80000006H[2] >> 8) & 0xf) != 0;
 }
 
@@ -1125,12 +1126,12 @@ CPUINFO_INLINE DWORD GetL2CacheSizeInKBytes(const Context_t &ctx) {
 }
 
 /// @brief L3 cache line size in bytes
-CPUINFO_INLINE DWORD GetL3CacheLineSize(const Context_t &ctx) {
+CPUINFO_INLINE DWORD GetL3CacheLineSizeInBytes(const Context_t &ctx) {
     return ctx.EAX_80000006H[3] & 0xff;
 }
 
 /// @brief Get the L3 cache line per tag
-CPUINFO_INLINE DWORD GetL3CacheLinePerTag(const Context_t &ctx) {
+CPUINFO_INLINE DWORD GetL3CacheLinesPerTag(const Context_t &ctx) {
     return ((ctx.EAX_80000006H[3] >> 8) & 0xf) != 0;
 }
 
@@ -1139,7 +1140,7 @@ CPUINFO_INLINE CacheAssociativity GetL3CacheAssociativity(const Context_t &ctx) 
     return static_cast<CacheAssociativity>((ctx.EAX_80000006H[3] >> 12) & 0xf);
 }
 
-/// @brief Get the L3 cache size described in 512KB units((Vlue * 512KB) <= L3 cache size < ((Value + 1) * 512KB))
+/// @brief Get the L3 cache size described in 512KB units((Value * 512KB) <= L3 cache size < ((Value + 1) * 512KB))
 CPUINFO_INLINE DWORD GetL3CacheSizeIn512KBytes(const Context_t &ctx) {
     return ((ctx.EAX_80000006H[3] >> 18) & 0x3fff);
 }
