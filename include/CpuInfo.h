@@ -563,47 +563,47 @@ bool HasFeature(const T feature, const Context_t &info) {
 
 template<>
 bool HasFeature<Feature>(const Feature f, const Context_t &ctx) {
-    return (ctx.EAX_00000001H[3] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000001H[3] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<Feature2>(const Feature2 f, const Context_t &ctx) {
-    return (ctx.EAX_00000001H[2] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000001H[2] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<Feature3>(const Feature3 f, const Context_t &ctx) {
-    return (ctx.EAX_00000007H[0][1] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000007H[0][1] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<Feature4>(const Feature4 f, const Context_t &ctx) {
-    return (ctx.EAX_00000007H[0][2] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000007H[0][2] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<Feature5>(const Feature5 f, const Context_t &ctx) {
-    return (ctx.EAX_00000007H[0][3] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000007H[0][3] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<Feature6>(const Feature6 f, const Context_t &ctx) {
-    return (ctx.EAX_00000007H[1][0] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_00000007H[1][0] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<ExtFeature>(const ExtFeature f, const Context_t &ctx) {
-    return (ctx.EAX_80000001H[3] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_80000001H[3] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<ExtFeature2>(const ExtFeature2 f, const Context_t &ctx) {
-    return (ctx.EAX_80000001H[2] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_80000001H[2] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 template<>
 bool HasFeature<ExtFeature3>(const ExtFeature3 f, const Context_t &ctx) {
-    return (ctx.EAX_80000007H[3] & (1u << (static_cast<DWORD>(f) & 0x1f))) != 0;
+    return (ctx.EAX_80000007H[3] & (1u << static_cast<DWORD>(f))) != 0;
 }
 
 //----------------------------------------------------------------------------------------------------
