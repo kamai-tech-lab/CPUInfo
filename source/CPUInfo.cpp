@@ -18,6 +18,7 @@ void PrintBasicInfo(const CpuInfo::Context_t &ctx) {
     WORD ProcSerialNumber[6];
     CpuInfo::GetProcessorSerialNumber(ProcSerialNumber, ctx);
 
+    printf("----Basic Information---\n");
     printf("Max Support Level                  : %02XH\n", CpuInfo::GetMaxSupportLevel(ctx));
     printf("Vender ID                          : %12s\n", venderID);
     printf("Processor type                     : %s\n", procTypeStr[(DWORD)CpuInfo::GetProcessorType(ctx)]);
@@ -114,7 +115,7 @@ void PrintBasicInfo(const CpuInfo::Context_t &ctx) {
             printf(" %s", feature6Items[i]);
         }
     }
-    printf("\n");
+    printf("\n\n");
 }
 
 void PrintCacheInfo(const CpuInfo::Context_t &ctx) {
@@ -125,6 +126,7 @@ void PrintCacheInfo(const CpuInfo::Context_t &ctx) {
         "Unified"
     };
 
+    printf("----Cache Information---\n");
     for (DWORD i = 0; i < CPUINFO_MAX_CACHES; ++i) {
         if (GetCacheType(i, ctx) == CpuInfo::CacheType::Null) {
             break;
@@ -144,6 +146,7 @@ void PrintCacheInfo(const CpuInfo::Context_t &ctx) {
         printf("Cache Inclusiveness                : %s\n", GetCacheInclusiveness(i, ctx) ? "True" : "False");
         printf("Complex Cache Indexing             : %s\n", GetCacheComplexCacheIndexing(i, ctx) ? "True" : "False");
         printf("Cache Size                         : %u bytes\n", GetCacheSize(i, ctx));
+        printf("\n");
     }
 }
 
@@ -154,23 +157,29 @@ void PrintTopologyInfo(const CpuInfo::Context_t &ctx) {
         "Core",
     };
 
+    if (GetTopologyLevelType(0, ctx) != CpuInfo::TopologyLevelType::Invalid) {
+        printf("----Topology Information---\n");
+    }
     for (DWORD i = 0; i < CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS; ++i) {
         if (GetTopologyLevelType(i, ctx) == CpuInfo::TopologyLevelType::Invalid) {
             break;
         }
-        printf("Topology No.                    : %u\n", i);
-        printf("Topology Level                  : %u\n", GetTopologyLevel(i, ctx));
-        printf("Topology Type                   : %s\n", topologyTypeStr[(DWORD)GetTopologyLevelType(i, ctx)]);
-        printf("Shift right APIC ID             : %u\n", GetShiftAPICIDBits(i, ctx));
-        printf("FC Logical Processors           : %u\n", GetNumFCLogicalProcessors(i, ctx));
-        printf("Enhances APIC ID                : %u\n", GetExtendedAPICID(i, ctx));
+        printf("Topology No.                       : %u\n", i);
+        printf("Topology Level                     : %u\n", GetTopologyLevel(i, ctx));
+        printf("Topology Type                      : %s\n", topologyTypeStr[(DWORD)GetTopologyLevelType(i, ctx)]);
+        printf("Shift right APIC ID                : %u\n", GetShiftAPICIDBits(i, ctx));
+        printf("FC Logical Processors              : %u\n", GetNumFCLogicalProcessors(i, ctx));
+        printf("Enhances APIC ID                   : %u\n", GetExtendedAPICID(i, ctx));
+        printf("\n");
     }
 }
 
 void PrintFrequencyInfo(const CpuInfo::Context_t &ctx) {
+    printf("----Frequency Information---\n");
     printf("Processor Base Frequency           : %u MHz\n", GetProcessorBaseFrequency(ctx));
     printf("Max Frequency                      : %u MHz\n", GetMaxFrequency(ctx));
     printf("Bus Frequency                      : %u MHz\n", GetBusFrequency(ctx));
+    printf("\n");
 }
 
 void PrintExtInfo(const CpuInfo::Context_t &ctx) {
@@ -196,6 +205,7 @@ void PrintExtInfo(const CpuInfo::Context_t &ctx) {
     char brandStr[49] = "";
     CpuInfo::GetBrandString(brandStr, ctx);
 
+    printf("----Ext Information---\n");
     printf("Max Ext Support Level              : %XH\n", GetMaxExtendedSupportLevel(ctx));
     printf("Brand String                       : %s\n", brandStr);
     printf("L2 Cache Line Size                 : %u bytes\n", GetL2CacheLineSizeInBytes(ctx));
@@ -209,6 +219,7 @@ void PrintExtInfo(const CpuInfo::Context_t &ctx) {
     printf("Max Physical Address Bits          : %u\n", GetMaxPhysicalAddressBits(ctx));
     printf("Max Linear Address Bits            : %u\n", GetMaxLinearAddressBits(ctx));
     printf("Max Guest Physical Address Bits    : %u\n", GetMaxGuestPhysicalAddressBits(ctx));
+    printf("\n");
 }
 
 

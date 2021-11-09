@@ -13,7 +13,7 @@
 // Defines
 //----------------------------------------------------------------------------------------------------
 #ifndef CPUINFO_MAX_CACHES
-    #define CPUINFO_MAX_CACHES                      (5)
+    #define CPUINFO_MAX_CACHES                      (8)
 #endif
 
 #ifndef CPUINFO_MAX_PROCESSOR_TOPOLOGY_LEVELS
@@ -791,10 +791,11 @@ CPUINFO_INLINE DWORD GetMaxCoresPerPackage(const DWORD index, const Context_t &c
     }
     // Verify that VenderID is "AuthenticAMD"
     if ((ctx.EAX_00000000H[1] == 0x68747541) && (ctx.EAX_00000000H[3] == 0x69746e65) && (ctx.EAX_00000000H[2] == 0x444d4163)) {
-        if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
-            return 0;
-        }
-        return ((ctx.EAX_8000001DH[index][0] >> 26) & 0x3f) + 1;
+        //if (!HasFeature(ExtFeature2::TOPOLOGY_EXT, ctx)) {
+        //    return 0;
+        //}
+        //return ((ctx.EAX_8000001DH[index][0] >> 26) & 0x3f) + 1;
+        return 0; // reserved
     }
     return ((ctx.EAX_00000004H[index][0] >> 26) & 0x3f) + 1;
 }
